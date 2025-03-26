@@ -13,6 +13,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
+from matplotlib import font_manager, rc
 
 
 # 메인 페이지 너비 넓게 (가장 처음에 설정해야 함)
@@ -25,6 +26,9 @@ st.success("Data Loaded!")
 # 한글 및 마이너스 깨짐
 plt.rcParams['font.family'] = "Malgun Gothic"
 plt.rcParams['axes.unicode_minus'] = False
+plt.rc("font", family = "Malgun Gothic")
+
+
 
 # CSV 파일 경로 설정
 CSV_FILE_PATH = 'https://raw.githubusercontent.com/jjjjunn/YH_project/refs/heads/main/'
