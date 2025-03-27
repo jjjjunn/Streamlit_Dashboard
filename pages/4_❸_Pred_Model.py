@@ -13,6 +13,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
+import plotly.graph_objs as go
 
 
 # 메인 페이지 너비 넓게 (가장 처음에 설정해야 함)
@@ -96,15 +97,15 @@ with tab1: # 서비스 가입 예측 모델
     with col2:
         gender_1 = st.radio(
             "성별을 선택해 주세요.",
-            ["남자", "여자"],
-            index=1
+            ["남자👨🏻", "여자👩🏻"],
+            index=0
         )
     
     with col3:
         marriage_1 = st.radio(
             "혼인여부를 선택해 주세요.",
-            ["미혼", "기혼"],
-            index=1
+            ["미혼🙅🏻‍♀️", "기혼👰🏻🤵🏻"],
+            index=0
         )
     
     # 예측 모델 학습 및 평가 함수
@@ -178,18 +179,33 @@ with tab1: # 서비스 가입 예측 모델
                             title='혼동 행렬')
             fig.update_xaxes(title='예측 레이블')
             fig.update_yaxes(title='실제 레이블')
+            fig.update_layout(width=600, height=600)
             st.plotly_chart(fig)
 
         with col2:
             # ROC 곡선 시각화
-            fig_roc, ax_roc = plt.subplots(figsize=(6, 6))
-            ax_roc.plot(fpr, tpr, label='ROC curve (area = {:.2f})'.format(roc_auc))
-            ax_roc.plot([0, 1], [0, 1], 'k--')  # 랜덤 분류기
-            ax_roc.set_xlabel('False Positive Rate')
-            ax_roc.set_ylabel('True Positive Rate')
-            ax_roc.set_title('Receiver Operating Characteristic (ROC)')
-            ax_roc.legend(loc='lower right')
-            st.pyplot(fig_roc)  # Streamlit에서 ROC 곡선 그래프 표시
+            fig_roc = go.Figure()
+
+            # ROC 곡선 추가
+            fig_roc.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC curve (area = {:.2f})'.format(roc_auc), 
+                                        line=dict(width=2, color='blue')))
+
+            # 랜덤 분류기 추가
+            fig_roc.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random Classifier', 
+                                        line=dict(width=2, dash='dash', color='black')))
+
+            # 레이아웃 설정
+            fig_roc.update_layout(
+                title='Receiver Operating Characteristic (ROC)',
+                xaxis_title='False Positive Rate',
+                yaxis_title='True Positive Rate',
+                showlegend=True,
+                width=600,
+                height=600
+            )
+
+            # Streamlit에서 ROC 곡선 그래프 표시
+            st.plotly_chart(fig_roc)
 
     # 예측 결과 출력 함수
     def pre_result(model, new_data):
@@ -277,7 +293,7 @@ with tab2: # 캠페인 추천 모델
     with col3:
         gender_2 = st.radio(
             "성별을 선택해 주세요.",
-            ["남자", "여자"],
+            ["남자👨🏻", "여자👩🏻"],
             index=1,
             key='radio2_1'
         )
@@ -285,7 +301,7 @@ with tab2: # 캠페인 추천 모델
     with col4:
         marriage_2 = st.radio(
             "혼인여부를 선택해 주세요.",
-            ["미혼", "기혼"],
+            ["미혼🙅🏻‍♀️", "기혼👰🏻🤵🏻"],
             index=1,
             key='radio2_2'
         )
@@ -408,7 +424,7 @@ with tab3: # 마케팅 채널 추천 모델
     with col2:
         gender_3 = st.radio(
             "성별을 선택해 주세요.",
-            ["남자", "여자"],
+            ["남자👨🏻", "여자👩🏻"],
             index=0,
             key='radio3_1'
         )
@@ -416,7 +432,7 @@ with tab3: # 마케팅 채널 추천 모델
     with col3:
         marriage_3 = st.radio(
             "혼인여부를 선택해 주세요.",
-            ["미혼", "기혼"],
+            ["미혼🙅🏻‍♀️", "기혼👰🏻🤵🏻"],
             index=0,
             key='radio3_2'
         )
