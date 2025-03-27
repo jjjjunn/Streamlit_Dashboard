@@ -645,26 +645,6 @@ with tab4:  #전환율 예측
 
         # Streamlit에서 시각화 표시
         st.plotly_chart(fig_ml_on)
-
-
-
-
-
-        # fig_ml_on, ax_ml_on = plt.subplots(figsize = (6, 3))
-        # sns.lineplot(
-        #     x = y_test,         #실제 값
-        #     y = y_pred,         #예측 값
-        #     marker = "o",
-        #     ax = ax_ml_on,
-        #     linestyle = "-",
-        #     label="예측 vs 실제"            
-        # )
-        # ax_ml_on.grid(visible = True, linestyle = "-", linewidth = 0.5)
-        # ax_ml_on.set_title("전환율 예측 결과 비교")
-        # ax_ml_on.set_xlabel("실제 전환율")
-        # ax_ml_on.set_ylabel("예측 전환율")
-        # ax_ml_on.legend()
-        # st.pyplot(fig_ml_on)
     
         #✅사용자가 입력한 값을 기반으로 전환율 예측
         input_data = pd.DataFrame(np.zeros((1, len(features))), columns = features)
@@ -685,12 +665,13 @@ with tab4:  #전환율 예측
 
 with tab5:  #방문자 수 예측
     #데이터 출력
+    # 데이터 출력
     with st.expander('오프라인 데이터'):
         st.dataframe(df_off, use_container_width=True)
 
     city_options = ["전체지역"] + list(city_mapping.values())
 
-    #학습 데이터 준비
+    # 학습 데이터 준비
     df_ml_off = df_off.groupby(["날짜", "지역"])["방문자수"].sum().reset_index()
     df_ml_off["날짜"] = pd.to_datetime(df_ml_off["날짜"])
     df_ml_off["year"] = df_ml_off["날짜"].dt.year
@@ -709,29 +690,67 @@ with tab5:  #방문자 수 예측
     X = df_region[features]
     y = df_region["방문자수"]
 
-    if st.button("오프라인 방문자 수 예측"):    #향후 12개월간의 방문자 수 예측
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42)
-        off_model = RandomForestRegressor(n_estimators = 100, random_state = 42, n_jobs = -1)
+    if st.button("오프라인 방문자 수 예측"):  # 향후 12개월간의 방문자 수 예측
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        off_model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
         off_model.fit(X_train, y_train)
 
-        future_dates = pd.date_range(start = df_region["날짜"].max(), periods = 12, freq = "ME")
-        future_df = pd.DataFrame({"year" : future_dates.year, "month": future_dates.month, "day": future_dates.day, "day_of_week": future_dates.weekday})
+        # 최대 날짜의 다음 달부터 12개월 간의 날짜 생성
+        max_date = df_region["날짜"].max()
+        start_date = (max_date + pd.DateOffset(months=1)).replace(day=1)  # 다음 달의 첫날
+        future_dates = pd.date_range(start=start_date, periods=365, freq="D")
+        future_df = pd.DataFrame({
+            "year": future_dates.year,
+            "month": future_dates.month,
+            "day": future_dates.day,
+            "day_of_week": future_dates.weekday
+        })
+        
+        # 방문자 수 예측
         future_pred = off_model.predict(future_df)
         future_df["예측 방문자 수"] = future_pred
-        future_df["날짜"] = future_dates
+
+        # "년-월" 형식의 칼럼 만들기
+        future_df["년월"] = future_df["year"].astype(str) + "-" + future_df["month"].astype(str).str.zfill(2)  # 월을 두 자리로 표시
+
+        # 월 별로 집계한 방문자 수
+        future_summary = future_df.groupby("년월", as_index=False)["예측 방문자 수"].sum()
+
+        # 예측 방문자 수 형식 변경
+        future_summary["예측 방문자 수"] = future_summary["예측 방문자 수"].astype(int).astype(str) + "명"
 
         st.subheader(f":chart: 향후 12개월 동안 {select_region}의 방문자 수 예측")
-        fig_ml_off, ax_ml_off = plt.subplots(figsize = (6, 3))
-        ax_ml_off.plot(future_df.index, future_df["예측 방문자 수"], marker = "o", linestyle = "-", color = "red", label = "예측 방문자 수")
-        ax_ml_off.set_title(f"{select_region}의 방문자 수 예측")
-        ax_ml_off.set_xlabel("날짜")
-        ax_ml_off.set_ylabel("방문자 수")
-        ax_ml_off.legend()
-        st.pyplot(fig_ml_off)
 
-        future_df["날짜"] = pd.to_datetime(future_df["날짜"]).apply(lambda x: x.replace(day = 1))
-        future_df["날짜"] = future_df["날짜"] + pd.DateOffset(months = 1)
+        # 방문자 수 예측 시각화
+        fig_ml_off = go.Figure()
 
-        future_df["예측 방문자 수"] = future_df["예측 방문자 수"].astype(int).astype(str) + "명"
-        st.write(future_df[["날짜", "예측 방문자 수"]])
-            
+        # 예측 방문자 수 선 그래프 추가
+        fig_ml_off.add_trace(go.Scatter(
+            x=future_summary["년월"],
+            y=future_summary["예측 방문자 수"].str.extract('(\d+)')[0].astype(int),  # 숫자만 추출하여 y값으로 사용
+            mode='markers+lines',  # 마커와 선을 동시에 표시
+            marker=dict(symbol='circle', size=8, color='red'),
+            line=dict(shape='linear'),
+            name='예측 방문자 수'  # 레전드에 표시될 이름
+        ))
+
+        # 레이아웃 설정
+        fig_ml_off.update_layout(
+            title=f"{select_region}의 방문자 수 예측",
+            xaxis_title='년-월',
+            yaxis_title='방문자 수',
+            height=600,
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=True),
+        )
+
+        # Streamlit에서 시각화와 데이터프레임 표시
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.plotly_chart(fig_ml_off)
+
+        with col2:
+            st.dataframe(future_summary[["년월", "예측 방문자 수"]], height=550)
+
+        
