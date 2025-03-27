@@ -519,20 +519,48 @@ with tab3: # 마케팅 채널 추천 모델
 
     def plot_channel_rates(channel_rates):
         #마케팅 채널 가입률 시각화 (막대 그래프)
-        fig, ax = plt.subplots(figsize=(5, 3))
+        fig_bar = go.Figure()
 
         # 파스텔 톤 색상 리스트 생성
-        pastel_colors = plt.cm.Pastel1(np.linspace(0, 1, len(channel_rates)))
+        pastel_colors = ['#FFDAB9', '#BDFCC9', '#E6E6FA']
 
-        ax.barh(channel_rates['channel'].apply(lambda x: register_channel[x]), 
-                channel_rates['conversion_rate'], color=pastel_colors)
+        fig_bar.add_trace(go.Bar(
+            y=channel_rates['channel'].apply(lambda x: register_channel[x]),
+            x = channel_rates['conversion_rate'],
+            orientation='h',
+            marker=dict(color=pastel_colors),
+        ))
+
+        # 선추가
+        fig_bar.add_shape(
+            type='line',
+            x0=0,
+            y0=-0.5,
+            x1=0,
+            y1=len(channel_rates) - 0.5,  # Y축 개수
+            line=dict(color='gray', width=0.8),
+        )
+
+        # 레이아웃 설정
+        fig_bar.update_layout(
+            title='마케팅 채널별 가입률',
+            xaxis_title='가입률',
+            height=600
+        )
+
+        # X축 설정
+        fig_bar.update_xaxes(
+            range=[min(min(channel_rates['conversion_rate']), 0), max(max(channel_rates['conversion_rate']), 0)],
+            showgrid=True
+        )
+
+        # y축 설정
+        fig_bar.update_yaxes(
+            title='마케팅 채널',
+            showgrid=False)
         
-        ax.axvline(0, color='gray', linewidth=0.8)  # 중간 0 선
-        ax.set_xlabel('가입률')
-        ax.set_title('마케팅 채널 별 가입률')
-        ax.set_xlim(0, channel_rates['conversion_rate'].max() * 1.1)  # X축 범위 설정
-
-        st.pyplot(fig)
+        # 표시
+        st.plotly_chart(fig_bar)
 
     # 사용자 정보 입력을 통한 추천 이벤트 평가
     if st.button("효과적인 마케팅 채널 추천받기"):
