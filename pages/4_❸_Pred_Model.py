@@ -15,6 +15,16 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 import plotly.graph_objs as go
 
+# [파스텔톤 Hex Codes]
+# 파스텔 블루: #ADD8E6
+# 파스텔 그린: #77DD77
+# 파스텔 퍼플: #B19CD9
+# 파스텔 옐로우: #FFFACD
+# 파스텔 피치: #FFDAB9
+# 파스텔 민트: #BDFCC9
+# 파스텔 라벤더: #E6E6FA
+# 파스텔 노란색: #FFF44F
+# 파스텔 그린: #B2FBA5
 
 # 메인 페이지 너비 넓게 (가장 처음에 설정해야 함)
 st.set_page_config(layout="wide") 
@@ -294,7 +304,7 @@ with tab2: # 캠페인 추천 모델
         gender_2 = st.radio(
             "성별을 선택해 주세요.",
             ["남자👨🏻", "여자👩🏻"],
-            index=1,
+            index=0,
             key='radio2_1'
         )
     
@@ -302,7 +312,7 @@ with tab2: # 캠페인 추천 모델
         marriage_2 = st.radio(
             "혼인여부를 선택해 주세요.",
             ["미혼🙅🏻‍♀️", "기혼👰🏻🤵🏻"],
-            index=1,
+            index=0,
             key='radio2_2'
         )
 
@@ -377,18 +387,50 @@ with tab2: # 캠페인 추천 모델
             campaigns = [event_mapping[campaign] for campaign in campaigns]  # 매핑된 캠페인 이름
             
             # 파스텔 톤 색상 리스트 생성
-            pastel_colors = plt.cm.Pastel1(np.linspace(0, 1, len(campaigns)))
+            pastel_colors = ['#FF9999', '#66B3FF', '#99FF99', '#FFCC99', '#77DD77', '#B19CD9', '#FFDAB9' ]
+            
+            # 가로 막대그래프 시각화
+            fig_bar = go.Figure()
 
-            # 가로 막대그래프
-            fig, ax = plt.subplots()
-            ax.barh(campaigns, rates, color=pastel_colors)
-            ax.axvline(0, color='gray', linewidth=0.8)  # 중간 0 선
-            
-            ax.set_xlabel('가입 증가율')
-            ax.set_title('Increased Rates by Campaigns')
-            ax.set_xlim(min(min(rates), 0), max(max(rates), 0))  # X축 범위 설정
-            
-            st.pyplot(fig)
+            # 가로 막대 추가
+            fig_bar.add_trace(go.Bar(
+                y=campaigns,  # 캠페인 이름
+                x=rates,      # 가입 증가율
+                orientation='h',  # 가로 막대그래프
+                marker=dict(color=pastel_colors),  # 색상 설정
+            ))
+
+            # 0 선 추가
+            fig_bar.add_shape(
+                type='line',
+                x0=0,
+                y0=-0.5,
+                x1=0,
+                y1=len(campaigns) - 0.5,
+                line=dict(color='gray', width=0.8),
+            )
+
+            # 레이아웃 설정
+            fig_bar.update_layout(
+                title='캠페인별 가입 증가율',
+                xaxis_title='가입 증가율',
+                height=600
+            )
+
+            # X축 설정
+            fig_bar.update_xaxes(
+                range=[min(min(rates), 0), max(max(rates), 0)],  # X축 범위 설정
+                showgrid=True
+            )
+
+            # Y축 설정
+            fig_bar.update_yaxes(
+                title='캠페인',
+                showgrid=False
+            )
+
+            # Streamlit에서 가로 막대그래프 표시
+            st.plotly_chart(fig_bar)
 
 data_3 = memeber_df[['age', 'gender', 'marriage', 'channel', 'before_ev']]
 
