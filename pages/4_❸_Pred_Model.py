@@ -621,21 +621,50 @@ with tab4:  #전환율 예측
         y_pred = on_model.predict(X_test)
 
         #✅예측 결과 시각화(실제 전환율 VS 예측 전환율 비교)
-        fig_ml_on, ax_ml_on = plt.subplots(figsize = (6, 3))
-        sns.lineplot(
-            x = y_test,         #실제 값
-            y = y_pred,         #예측 값
-            marker = "o",
-            ax = ax_ml_on,
-            linestyle = "-",
-            label="예측 vs 실제"            
+        fig_ml_on = go.Figure()
+
+        # 실제 값과 예측 값 비교를 위한 산점도 추가
+        fig_ml_on.add_trace(go.Scatter(
+            x=y_test,         # 실제 값
+            y=y_pred,         # 예측 값
+            mode='markers+lines',  # 마커와 선을 동시에 표시
+            marker=dict(symbol='circle', size=8, color='blue', line=dict(width=2)),
+            line=dict(shape='linear'),
+            name='예측 vs 실제'  # 레전드에 표시될 이름
+        ))
+
+        # 레이아웃 설정
+        fig_ml_on.update_layout(
+            title='✅전환율 예측 결과 비교',
+            xaxis_title='실제 전환율',
+            yaxis_title='예측 전환율',
+            height=600,
+            xaxis=dict(showgrid=True),  # X축 그리드 표시
+            yaxis=dict(showgrid=True),  # Y축 그리드 표시
         )
-        ax_ml_on.grid(visible = True, linestyle = "-", linewidth = 0.5)
-        ax_ml_on.set_title("전환율 예측 결과 비교")
-        ax_ml_on.set_xlabel("실제 전환율")
-        ax_ml_on.set_ylabel("예측 전환율")
-        ax_ml_on.legend()
-        st.pyplot(fig_ml_on)
+
+        # Streamlit에서 시각화 표시
+        st.plotly_chart(fig_ml_on)
+
+
+
+
+
+        # fig_ml_on, ax_ml_on = plt.subplots(figsize = (6, 3))
+        # sns.lineplot(
+        #     x = y_test,         #실제 값
+        #     y = y_pred,         #예측 값
+        #     marker = "o",
+        #     ax = ax_ml_on,
+        #     linestyle = "-",
+        #     label="예측 vs 실제"            
+        # )
+        # ax_ml_on.grid(visible = True, linestyle = "-", linewidth = 0.5)
+        # ax_ml_on.set_title("전환율 예측 결과 비교")
+        # ax_ml_on.set_xlabel("실제 전환율")
+        # ax_ml_on.set_ylabel("예측 전환율")
+        # ax_ml_on.legend()
+        # st.pyplot(fig_ml_on)
     
         #✅사용자가 입력한 값을 기반으로 전환율 예측
         input_data = pd.DataFrame(np.zeros((1, len(features))), columns = features)
