@@ -107,14 +107,14 @@ with tab1: # 서비스 가입 예측 모델
     with col2:
         gender_1 = st.radio(
             "성별을 선택해 주세요.",
-            ["남자👨🏻", "여자👩🏻"],
+            ["남자", "여자"],
             index=0
         )
     
     with col3:
         marriage_1 = st.radio(
             "혼인여부를 선택해 주세요.",
-            ["미혼🙅🏻‍♀️", "기혼👰🏻🤵🏻"],
+            ["미혼", "기혼"],
             index=0
         )
     
@@ -243,7 +243,9 @@ with tab1: # 서비스 가입 예측 모델
         # 시각화
         plot_metrics(y_test, y_pred, grid_search)
 
-data_2 = memeber_df[['age', 'city', 'gender', 'marriage', 'before_ev', 'part_ev', 'after_ev']]
+
+
+data_2 = memeber_df[['age', 'gender', 'marriage', 'before_ev', 'part_ev', 'after_ev']]
 
 # 참여 이벤트 매핑
 event_mapping = {
@@ -257,31 +259,30 @@ event_mapping = {
 }
 
 city_mapping = {
-    0:'부산',
-    1:'대구', 
-    2:'인천', 
-    3:'대전', 
-    4:'울산', 
-    5:'광주', 
-    6:'서울', 
-    7:'경기', 
-    8:'강원', 
-    9:'충북', 
-    10:'충남', 
-    11:'전북', 
-    12:'전남', 
-    13:'경북', 
-    14:'경남', 
-    15:'세종', 
-    16:'제주'
+    0: '전체지역',
+    1: '부산',
+    2: '대구', 
+    3: '인천', 
+    4: '대전', 
+    5: '울산', 
+    6: '광주', 
+    7: '서울', 
+    8: '경기', 
+    9: '강원', 
+    10: '충북', 
+    11: '충남', 
+    12: '전북', 
+    13: '전남', 
+    14: '경북', 
+    15: '경남', 
+    16: '세종', 
+    17: '제주'
 }
-
-city_options = ["전체지역"] + list(city_mapping.values())
 
 with tab2: # 캠페인 추천 모델
     with st.expander('회원 데이터'):
         st.dataframe(print_df, use_container_width=True)
-    col1, col2, col3, col4 = st.columns([4, 2, 2, 2])
+    col1, col2, col3 = st.columns([4, 3, 3])
     with col1:
         st.write("캠페인 추천 모델입니다. 아래의 조건을 선택해 주세요.")
         ages_2 = st.slider(
@@ -292,26 +293,17 @@ with tab2: # 캠페인 추천 모델
         st.write(f"**선택 연령대: :red[{ages_2}]세**")
         
     with col2:
-        city_2 = st.selectbox(
-            "도시를 선택해 주세요.",
-            city_options,
-            index=0,
-            key='selectbox2'
-        )
-        city_index = city_options.index(city_2)  # 선택된 도시의 인덱스 저장
-
-    with col3:
         gender_2 = st.radio(
             "성별을 선택해 주세요.",
-            ["남자👨🏻", "여자👩🏻"],
+            ["남자", "여자"],
             index=0,
             key='radio2_1'
         )
     
-    with col4:
+    with col3:
         marriage_2 = st.radio(
             "혼인여부를 선택해 주세요.",
-            ["미혼🙅🏻‍♀️", "기혼👰🏻🤵🏻"],
+            ["미혼", "기혼"],
             index=0,
             key='radio2_2'
         )
@@ -326,39 +318,27 @@ with tab2: # 캠페인 추천 모델
         campaign_groups = data.groupby('part_ev')
         
         for campaign, group in campaign_groups:
-            # 캠페인 전후의 가입자 수 계산
+            # 캠페인전과 후의 가입자 수 계산
             pre_signups = (group['before_ev'] == 0).sum()  # 캠페인 전 가입자 수 (0의 수)
             post_signups = (group['after_ev'] == 0).sum()  # 캠페인 후 가입자 수 (0의 수)
-
-            # 가입 증가율 계산
+            
+            # 가입 증가율 계산 (0으로 나누는 경우 처리)
             if pre_signups > 0:
-                increase_rate = (post_signups - pre_signups) / pre_signups  # 증가율
+                increase_rate = (post_signups - pre_signups) / pre_signups
             else:
-                increase_rate = "가입자 수 없음" if post_signups == 0 else "가입자 수가 없음"
-
-            if isinstance(increase_rate, float) and increase_rate < 0:
-                print(f"{campaign} 캠페인: 가입자 수 감소함 ({increase_rate:.2%})")
-
+                increase_rate = 1 if post_signups > 0 else 0  # 가입자 수가 없다면 증가율 1
+            
             increase_rates[campaign] = increase_rate
 
         return increase_rates
 
-    def recommend_campaign(data, age_range, city_index, gender, marriage):
+    def recommend_campaign(data, age_range, gender, marriage):
     # 조건에 따라 데이터 필터링
-        if city_index == 0: # '전체 지역' 선택
-            filtered_data = data[
-                (data['age'].between(age_range[0], age_range[1])) &
-                (data['gender'] == (1 if gender == '여자' else 0)) &
-                (data['marriage'] == (1 if marriage == '기혼' else 0))
-            ]
-        else: # 특정 도시 선택
-            city_name = list(city_mapping.values())[city_index]  # 선택된 도시의 이름을 가져옴
-            filtered_data = data[
-                (data['age'].between(age_range[0], age_range[1])) &
-                (data['city'] == city_name) &
-                (data['gender'] == (1 if gender == '여자' else 0)) &
-                (data['marriage'] == (1 if marriage == '기혼' else 0))
-            ]
+        filtered_data = data[
+            (data['age'].between(age_range[0], age_range[1])) &
+            (data['gender'] == (1 if gender == '여자' else 0)) &
+            (data['marriage'] == (1 if marriage == '기혼' else 0))
+        ]
 
         if filtered_data.empty:
             return "해당 조건에 맞는 데이터가 없습니다."
@@ -373,7 +353,7 @@ with tab2: # 캠페인 추천 모델
 
     # 사용자 정보 입력을 통한 추천 이벤트 평가
     if st.button("캠페인 추천 받기"):
-        best_campaign, increase_rates = recommend_campaign(data_2, ages_2, city_index, gender_2, marriage_2)
+        best_campaign, increase_rates = recommend_campaign(data_2, ages_2, gender_2, marriage_2)
             
         if isinstance(best_campaign, str):
             st.write(best_campaign)
@@ -390,8 +370,8 @@ with tab2: # 캠페인 추천 모델
             campaigns = [event_mapping[campaign] for campaign in campaigns]  # 매핑된 캠페인 이름
             
             # 파스텔 톤 색상 리스트 생성
-            pastel_colors = ['#FF9999', '#66B3FF', '#99FF99', '#FFCC99', '#77DD77', '#B19CD9', '#FFDAB9' ]
-            
+            pastel_colors = ['#FF9999', '#66B3FF', '#99FF99', '#FFCC99', '#77DD77', '#B19CD9', '#FFDAB9']
+
             # 가로 막대그래프 시각화
             fig_bar = go.Figure()
 
@@ -435,6 +415,7 @@ with tab2: # 캠페인 추천 모델
             # Streamlit에서 가로 막대그래프 표시
             st.plotly_chart(fig_bar)
 
+
 data_3 = memeber_df[['age', 'gender', 'marriage', 'channel', 'before_ev']]
 
 # 가입 시 유입경로 매핑
@@ -469,7 +450,7 @@ with tab3: # 마케팅 채널 추천 모델
     with col2:
         gender_3 = st.radio(
             "성별을 선택해 주세요.",
-            ["남자👨🏻", "여자👩🏻"],
+            ["남자", "여자"],
             index=0,
             key='radio3_1'
         )
@@ -477,7 +458,7 @@ with tab3: # 마케팅 채널 추천 모델
     with col3:
         marriage_3 = st.radio(
             "혼인여부를 선택해 주세요.",
-            ["미혼🙅🏻‍♀️", "기혼👰🏻🤵🏻"],
+            ["미혼", "기혼"],
             index=0,
             key='radio3_2'
         )
