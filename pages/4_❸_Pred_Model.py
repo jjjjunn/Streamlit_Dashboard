@@ -326,16 +326,19 @@ with tab2: # 캠페인 추천 모델
         campaign_groups = data.groupby('part_ev')
         
         for campaign, group in campaign_groups:
-            # 캠페인전과 후의 가입자 수 계산
-            pre_signups = group['after_ev'].sum()
-            post_signups = group['before_ev'].sum()  # 'before_ev' 값 적절히 할당
-            
-            # 가입 증가율 계산 (0으로 나누는 경우 처리)
+            # 캠페인 전후의 가입자 수 계산
+            pre_signups = (group['before_ev'] == 0).sum()  # 캠페인 전 가입자 수 (0의 수)
+            post_signups = (group['after_ev'] == 0).sum()  # 캠페인 후 가입자 수 (0의 수)
+
+            # 가입 증가율 계산
             if pre_signups > 0:
-                increase_rate = (post_signups - pre_signups) / pre_signups
+                increase_rate = (post_signups - pre_signups) / pre_signups  # 증가율
             else:
-                increase_rate = 1 if post_signups > 0 else 0  # 가입자 수가 없다면 증가율 1
-            
+                increase_rate = "가입자 수 없음" if post_signups == 0 else "가입자 수가 없음"
+
+            if isinstance(increase_rate, float) and increase_rate < 0:
+                print(f"{campaign} 캠페인: 가입자 수 감소함 ({increase_rate:.2%})")
+
             increase_rates[campaign] = increase_rate
 
         return increase_rates
