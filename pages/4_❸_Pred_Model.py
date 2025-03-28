@@ -259,24 +259,23 @@ event_mapping = {
 }
 
 city_mapping = {
-    0: '전체지역',
-    1: '부산',
-    2: '대구', 
-    3: '인천', 
-    4: '대전', 
-    5: '울산', 
-    6: '광주', 
-    7: '서울', 
-    8: '경기', 
-    9: '강원', 
-    10: '충북', 
-    11: '충남', 
-    12: '전북', 
-    13: '전남', 
-    14: '경북', 
-    15: '경남', 
-    16: '세종', 
-    17: '제주'
+    0: '부산',
+    1: '대구', 
+    2: '인천', 
+    3: '대전', 
+    4: '울산', 
+    5: '광주', 
+    6: '서울', 
+    7: '경기', 
+    8: '강원', 
+    9: '충북', 
+    10: '충남', 
+    11: '전북', 
+    12: '전남', 
+    13: '경북', 
+    14: '경남', 
+    15: '세종', 
+    16: '제주'
 }
 
 with tab2: # 캠페인 추천 모델
@@ -648,12 +647,11 @@ with tab4:  #전환율 예측
         st.subheader(f"예상 전환율 : {predicted_conversion:.2f}%")
 
 with tab5:  #방문자 수 예측
-    #데이터 출력
     # 데이터 출력
     with st.expander('오프라인 데이터'):
         st.dataframe(df_off, use_container_width=True)
 
-    city_options = ["전체지역"] + list(city_mapping.values())
+    city_options = list(city_mapping.values())
 
     # 학습 데이터 준비
     df_ml_off = df_off.groupby(["날짜", "지역"])["방문자수"].sum().reset_index()
@@ -665,10 +663,7 @@ with tab5:  #방문자 수 예측
 
     select_region = st.selectbox("지역을 선택하세요.", city_options)
 
-    if select_region == "전체지역":
-        df_region = df_ml_off  # 전체 지역 데이터를 사용
-    else:
-        df_region = df_ml_off[df_ml_off["지역"] == select_region]  # 특정 지역 데이터 사용
+    df_region = df_ml_off[df_ml_off["지역"] == select_region]  # 특정 지역 데이터 사용
 
     features = ["year", "month", "day", "day_of_week"]
     X = df_region[features]
