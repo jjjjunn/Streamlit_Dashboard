@@ -7,7 +7,7 @@ import plotly.express as px
 import time  
 import folium
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, precision_score, recall_score, f1_score, roc_curve, auc
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
@@ -302,7 +302,7 @@ with tab1: # 서비스 가입 예측 모델
         new_data = create_features(new_data)
 
         # 기존 데이터로 모델 학습
-        ensemble_model, X_test, y_test, cv_scores = train_model(data)
+        ensemble_model, X_test, y_test, cv_scores = train_model(ensemble_model, X_test, y_test, cv_scores)
 
         # 예측 수행
         pre_result(ensemble_model, new_data)
