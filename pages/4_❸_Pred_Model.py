@@ -315,7 +315,7 @@ with tab1: # 서비스 가입 예측 모델
 
 
 # 캠페인 추천 모델
-data_2 = create_features(member_df[['age', 'gender', 'marriage', 'before_ev', 'part_ev', 'after_ev']])
+data_2 = create_features(member_df[['age', 'city', 'gender', 'marriage', 'before_ev', 'part_ev', 'after_ev']])
 
 # 참여 이벤트 매핑
 event_mapping = {
