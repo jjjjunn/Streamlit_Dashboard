@@ -45,8 +45,8 @@ plt.rcParams['axes.unicode_minus'] = False
 CSV_FILE_PATH = 'https://raw.githubusercontent.com/jjjjunn/YH_project/refs/heads/main/'
 
 
-# member_df = pd.read_csv(CSV_FILE_PATH + 'members_data.csv')
-member_df = pd.read_csv('https://raw.githubusercontent.com/jjjjunn/YH_project/refs/heads/main/members_data.csv')
+member_df = pd.read_csv(CSV_FILE_PATH + 'members_data.csv')
+# member_df = pd.read_csv('https://raw.githubusercontent.com/jjjjunn/YH_project/refs/heads/main/members_data.csv')
 
 # Streamlit emoji: https://streamlit-emoji-shortcodes-streamlit-app-gwckff.streamlit.app/
 
@@ -292,7 +292,7 @@ with tab1: # 서비스 가입 예측 모델
     if st.button("예측하기"):
         # 입력된 값을 새로운 데이터 형식으로 변환
         new_data = pd.DataFrame({
-            'age': [avg_age],
+            'age': [(ages_1[0] + ages_1[1]) / 2],
             'gender': [1 if gender_1 == '여자' else 0],
             'marriage': [1 if marriage_1 == '기혼' else 0],
             'city': [6]  # 기본값으로 서울 설정
