@@ -237,8 +237,7 @@ with tab1: # 서비스 가입 예측 모델
     def plot_metrics(y_test, y_pred, y_pred_proba):
         cm = confusion_matrix(y_test, y_pred)
         
-
-        y_scores = grid_search.predict_proba(X_test)[:, 1]  # 긍정 클래스 확률
+        y_scores = y_pred_proba  # 긍정 클래스 확률
         fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
         roc_auc = auc(fpr, tpr)
 
