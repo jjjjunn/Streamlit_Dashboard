@@ -302,7 +302,7 @@ with tab1: # 서비스 가입 예측 모델
         new_data = create_features(new_data)
 
         # 기존 데이터로 모델 학습
-        ensemble_model, X_test, y_test, cv_scores = train_improved_model(data)
+        ensemble_model, X_test, y_test, cv_scores = train_model(data)
 
         # 예측 수행
         pre_result(ensemble_model, new_data)
