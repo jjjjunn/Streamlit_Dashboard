@@ -44,7 +44,9 @@ plt.rcParams['axes.unicode_minus'] = False
 # CSV 파일 경로 설정
 CSV_FILE_PATH = 'https://raw.githubusercontent.com/jjjjunn/YH_project/refs/heads/main/'
 
-member_df = pd.read_csv(CSV_FILE_PATH + 'members_data.csv')
+
+# member_df = pd.read_csv(CSV_FILE_PATH + 'members_data.csv')
+member_df = pd.read_csv('https://raw.githubusercontent.com/jjjjunn/YH_project/refs/heads/main/members_data.csv')
 
 # Streamlit emoji: https://streamlit-emoji-shortcodes-streamlit-app-gwckff.streamlit.app/
 
