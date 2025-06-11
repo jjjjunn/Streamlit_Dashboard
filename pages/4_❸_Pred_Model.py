@@ -344,7 +344,7 @@ with tab1: # 서비스 가입 예측 모델
         y_pred, y_pred_proba = evaluate_model(ensemble_model, X_test, y_test, cv_scores)
 
         # 시각화
-        plot_metrics(y_test, y_pred, grid_search)
+        plot_metrics(y_test, y_pred, y_pred_proba)
 
 
 # 캠페인 추천 모델
