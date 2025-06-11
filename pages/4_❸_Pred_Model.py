@@ -44,7 +44,7 @@ plt.rcParams['axes.unicode_minus'] = False
 # CSV 파일 경로 설정
 CSV_FILE_PATH = 'https://raw.githubusercontent.com/jjjjunn/YH_project/refs/heads/main/'
 
-memeber_df = pd.read_csv(CSV_FILE_PATH + 'members_data.csv')
+member_df = pd.read_csv(CSV_FILE_PATH + 'members_data.csv')
 
 # Streamlit emoji: https://streamlit-emoji-shortcodes-streamlit-app-gwckff.streamlit.app/
 
@@ -66,7 +66,7 @@ def off_load_data():
 df_on = on_load_data()
 df_off = off_load_data()
 
-print_df = memeber_df.rename(columns={
+print_df = member_df.rename(columns={
      "age": "나이",
      "gender": "성별",
      "marriage": "혼인여부",
@@ -111,7 +111,7 @@ def create_features(data):
     
     return data_copy
 
-data = create_features(memeber_df[['age', 'city', 'gender', 'marriage', 'after_ev']])
+data = create_features(member_df[['age', 'city', 'gender', 'marriage', 'after_ev']])
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(['서비스가입 예측', '추천 캠페인', '추천 채널', '전환율 예측', '방문자수 예측'])
 
@@ -313,7 +313,7 @@ with tab1: # 서비스 가입 예측 모델
 
 
 # 캠페인 추천 모델
-data_2 = create_features(memeber_df[['age', 'gender', 'marriage', 'before_ev', 'part_ev', 'after_ev']])
+data_2 = create_features(member_df[['age', 'gender', 'marriage', 'before_ev', 'part_ev', 'after_ev']])
 
 # 참여 이벤트 매핑
 event_mapping = {
@@ -504,7 +504,7 @@ with tab2: # 캠페인 추천 모델
             st.plotly_chart(fig_bar)
 
 # 마케팅 채널 추천 
-data_3 = memeber_df[['age', 'gender', 'marriage', 'channel', 'before_ev']]
+data_3 = member_df[['age', 'gender', 'marriage', 'channel', 'before_ev']]
 
 # 가입 시 유입경로 매핑
 register_channel = {
