@@ -15,6 +15,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 import plotly.graph_objs as go
 
+
 # [파스텔톤 Hex Codes]
 # 파스텔 블루: #ADD8E6
 # 파스텔 그린: #77DD77
@@ -88,7 +89,29 @@ print_df['참여이벤트'] = print_df['참여이벤트'].map({0:"워크숍 개�
           3:"게임 및 퀴즈", 4:"커뮤니티 청소 활동", 5:"업사이클링 마켓", 6:"홍보 부스 운영"})
 print_df['참여_후'] = print_df['참여_후'].map({0:'가입', 1:'미가입'})
 
-data = memeber_df[['age', 'city', 'gender', 'marriage', 'after_ev']]
+# 특성 공학 함수 추가
+def create_features(data):
+    """특성 공학을 통해 새로운 변수 생성"""
+    data_copy = data.copy()
+    
+    # 연령대 그룹 생성
+    data_copy['age_group'] = pd.cut(data_copy['age'], 
+                                   bins=[0, 30, 40, 50, 100], 
+                                   labels=['20대', '30대', '40대', '50대이상'])
+    
+    # 성별-혼인상태 조합 변수
+    data_copy['gender_marriage'] = data_copy['gender'].astype(str) + '_' + data_copy['marriage'].astype(str)
+    
+    # 도시 규모별 그룹 (대도시, 중소도시 등)
+    metro_cities = [6, 7]  # 서울, 경기
+    major_cities = [0, 1, 2, 3, 4, 5]  # 부산, 대구, 인천, 대전, 울산, 광주
+    data_copy['city_type'] = data_copy['city'].apply(
+        lambda x: 'metro' if x in metro_cities else 'major' if x in major_cities else 'other'
+    )
+    
+    return data_copy
+
+data = create_features(memeber_df[['age', 'city', 'gender', 'marriage', 'after_ev']])
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(['서비스가입 예측', '추천 캠페인', '추천 채널', '전환율 예측', '방문자수 예측'])
 
@@ -122,42 +145,73 @@ with tab1: # 서비스 가입 예측 모델
     @st.cache_data
     def train_model(data):
         numeric_features = ['age']
-        categorical_features = ['gender', 'marriage']
+        categorical_features = ['gender', 'marriage', 'city', 'age_group', 'gender_marriage', 'city_type']
 
         # ColumnTransformer 설정
         preprocessor = ColumnTransformer(
             transformers=[
                 ('num', StandardScaler(), numeric_features), # 수치형 - 표준화 
-                ('cat', OneHotEncoder(categories='auto'), categorical_features) # 범주형 - 원핫인코딩
+                ('cat', OneHotEncoder(drop='first', handle_unknown='ignore'), categorical_features) # 범주형 - 원핫인코딩
             ]
         )
 
-        # 랜덤 포레스트 모델
-        model = Pipeline(steps=[
-            ('preprocessor', preprocessor),
-            ('classifier', RandomForestClassifier(random_state=42, n_jobs=-1))
-        ])
+        # 여러 모델 정의
+        rf_model = RandomForestClassifier(
+            n_estimators=200,
+            max_depth=15,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            random_state=42,
+            n_jobs=-1,
+            class_weight='balanced'
+        )
+        
+        gb_model = GradientBoostingClassifier(
+            n_estimators=150,
+            learning_rate=0.1,
+            max_depth=6,
+            random_state=42
+        )
+        
+        lr_model = LogisticRegression(
+            random_state=42,
+            class_weight='balanced',
+            max_iter=1000
+        )
 
-        # 데이터 분할
+        # 앙상블 모델 생성
+        ensemble_model = VotingClassifier(
+            estimators=[
+                ('rf', Pipeline([('preprocessor', preprocessor), ('classifier', rf_model)])),
+                ('gb', Pipeline([('preprocessor', preprocessor), ('classifier', gb_model)])),
+                ('lr', Pipeline([('preprocessor', preprocessor), ('classifier', lr_model)]))
+            ],
+            voting='soft'
+        )
+
+        # 데이터 분할 (계층화 샘플링)
         X = data.drop(columns=['after_ev'])
         y = data['after_ev']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        # 계층화 분할
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42, stratify=y
+        )
 
-        # 하이퍼파라미터 튜닝을 위한 그리드 서치
-        param_grid = {
-            'classifier__n_estimators': [100, 200],
-            'classifier__max_depth': [None, 10, 20],
-            'classifier__min_samples_split': [2, 5]
-        }
+        # 교차검증을 통한 모델 평가
+        cv_scores = cross_val_score(ensemble_model, X_train, y_train, 
+                                   cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42), 
+                                   scoring='f1')
+        
+        # 모델 학습
+        ensemble_model.fit(X_train, y_train)
 
-        grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2)
-        grid_search.fit(X_train, y_train)
-
-        return grid_search, X_test, y_test
+        return ensemble_model, X_test, y_test, cv_scores
 
     # 성능 평가 및 지표 출력 함수
-    def evaluate_model(grid_search, X_test, y_test):
-        y_pred = grid_search.predict(X_test)
+    def evaluate_model(model, X_test, y_test, cv_scores):
+        y_pred = model.predict(X_test)
+        y_pred_proba = model.predict_proba(X_test)[:, 1]
 
         # 성능 평가
         accuracy = accuracy_score(y_test, y_pred)
@@ -165,11 +219,16 @@ with tab1: # 서비스 가입 예측 모델
         recall = recall_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred)
 
-        # 성능 지표 출력
-        st.write(f"이 모델의 정확도: {accuracy * 100:.1f}%, 정밀도(Precision): {precision * 100:.1f}%, 재현율 (Recall): {recall * 100:.1f}%")
-        st.write(f"F1-Score: {f1 * 100:.1f}%")
+        # 교차검증 결과 포함
+        st.write(f"**교차검증 F1 점수: {cv_scores.mean():.3f} (±{cv_scores.std() * 2:.3f})**")
+        st.write(f"**테스트 성능 - 정확도: {accuracy * 100:.1f}%, 정밀도: {precision * 100:.1f}%, 재현율: {recall * 100:.1f}%**")
+        st.write(f"**F1-Score: {f1 * 100:.1f}%**")
 
-        return y_pred
+        # 상세 분류 리포트
+        with st.expander("상세 분류 리포트"):
+            st.text(classification_report(y_test, y_pred, target_names=['가입', '미가입']))
+
+        return y_pred, y_pred_proba
 
     # 시각화 함수 (혼동 행렬 및 ROC 곡선)
     def plot_metrics(y_test, y_pred, grid_search):
@@ -220,32 +279,41 @@ with tab1: # 서비스 가입 예측 모델
     # 예측 결과 출력 함수
     def pre_result(model, new_data):
         prediction = model.predict(new_data)
-        st.write(f"**모델 예측 결과: :rainbow[{'가입' if prediction[0] == 0 else '미가입'}]**") # 0:가입, 1:미가입
+        prediction_proba = model.predict_proba(new_data)
+
+        result_text = '가입' if prediction[0] == 0 else '미가입'
+        confidence = prediction_proba[0][prediction[0]] * 100
+        
+        st.write(f"**모델 예측 결과: :rainbow[{result_text}] (신뢰도: {confidence:.1f}%)**")
 
     # 버튼 클릭에 따른 동작
     if st.button("예측하기"):
         # 입력된 값을 새로운 데이터 형식으로 변환
         new_data = pd.DataFrame({
-            'age': [(ages_1[0] + ages_1[1]) / 2],  # 나이의 중앙값
-            'gender': [1 if gender_1 == '여자' else 0],  # 성별 인코딩 (0:남자, 1:여자)
-            'marriage': [1 if marriage_1 == '기혼' else 0]  # 혼인 여부 인코딩 (0:미혼, 1:기혼)
+            'age': [avg_age],
+            'gender': [1 if gender_1 == '여자' else 0],
+            'marriage': [1 if marriage_1 == '기혼' else 0],
+            'city': [6]  # 기본값으로 서울 설정
         })
 
+        # 특성 공학 적용
+        new_data = create_features(new_data)
+
         # 기존 데이터로 모델 학습
-        grid_search, X_test, y_test = train_model(data)
+        ensemble_model, X_test, y_test, cv_scores = train_improved_model(data)
 
         # 예측 수행
-        pre_result(grid_search.best_estimator_, new_data)
+        pre_result(ensemble_model, new_data)
 
         # 성능 평가 및 지표 출력
-        y_pred = evaluate_model(grid_search, X_test, y_test)
+        y_pred, y_pred_proba = evaluate_model(ensemble_model, X_test, y_test, cv_scores)
 
         # 시각화
         plot_metrics(y_test, y_pred, grid_search)
 
 
-
-data_2 = memeber_df[['age', 'gender', 'marriage', 'before_ev', 'part_ev', 'after_ev']]
+# 캠페인 추천 모델
+data_2 = create_features(memeber_df[['age', 'gender', 'marriage', 'before_ev', 'part_ev', 'after_ev']])
 
 # 참여 이벤트 매핑
 event_mapping = {
@@ -312,6 +380,7 @@ with tab2: # 캠페인 추천 모델
     def calculate_enrollment_increase_rate(data):
         #캠페인 별 가입 증가율 계산
         increase_rates = {}
+        campaign_stats = {}
         
         # 조건별 캠페인 그룹화 및 계산
         campaign_groups = data.groupby('part_ev')
@@ -320,16 +389,31 @@ with tab2: # 캠페인 추천 모델
             # 캠페인전과 후의 가입자 수 계산
             pre_signups = (group['before_ev'] == 0).sum()  # 캠페인 전 가입자 수 (0의 수)
             post_signups = (group['after_ev'] == 0).sum()  # 캠페인 후 가입자 수 (0의 수)
+            total_participants = len(group)
             
-            # 가입 증가율 계산 (0으로 나누는 경우 처리)
-            if pre_signups > 0:
-                increase_rate = (post_signups - pre_signups) / pre_signups
+            # 전환율 계산
+            if total_participants > 0:
+                conversion_rate = post_signups / total_participants
+                # 베이즈 추정으로 신뢰구간 계산
+                alpha = post_signups + 1
+                beta = total_participants - post_signups + 1
+                mean_rate = alpha / (alpha + beta)
+                
+                increase_rates[campaign] = mean_rate
+                campaign_stats[campaign] = {
+                    'conversion_rate': conversion_rate,
+                    'participants': total_participants,
+                    'signups': post_signups
+                }
             else:
-                increase_rate = 1 if post_signups > 0 else 0  # 가입자 수가 없다면 증가율 1
-            
-            increase_rates[campaign] = increase_rate
+                increase_rates[campaign] = 0
+                campaign_stats[campaign] = {
+                    'conversion_rate': 0,
+                    'participants': 0,
+                    'signups': 0
+                }
 
-        return increase_rates
+        return increase_rates, campaign_stats
 
     def recommend_campaign(data, age_range, gender, marriage):
     # 조건에 따라 데이터 필터링
@@ -343,26 +427,31 @@ with tab2: # 캠페인 추천 모델
             return "해당 조건에 맞는 데이터가 없습니다."
         
         # 가입 증가율 계산
-        increase_rates = calculate_enrollment_increase_rate(filtered_data)
+        increase_rates, campaign_stats = calculate_enrollment_increase_rate(filtered_data)
 
         # 가장 높은 가입 증가율을 가진 캠페인 추천
         best_campaign = max(increase_rates, key=increase_rates.get)
         
-        return best_campaign, increase_rates
+        return best_campaign, increase_rates, campaign_stats
 
     # 사용자 정보 입력을 통한 추천 이벤트 평가
     if st.button("캠페인 추천 받기"):
-        best_campaign, increase_rates = recommend_campaign(data_2, ages_2, gender_2, marriage_2)
+        best_campaign, increase_rates, campaign_stats = recommend_campaign(data_2, ages_2, gender_2, marriage_2)
             
         if isinstance(best_campaign, str):
             st.write(best_campaign)
         else:
             st.write(f"**추천 캠페인: :violet[{event_mapping[best_campaign]}] 👈 이 캠페인이 가장 가입을 유도할 수 있습니다!**")
+
+            # 상세 통계 정보 출력
+            best_stats = campaign_stats[best_campaign]
+            st.write(f"**추천 근거: 참여자 {best_stats['participants']}명 중 {best_stats['signups']}명 가입 (전환율: {best_stats['conversion_rate']:.1%})**")
             
             # 가입 증가율 결과 출력
             with st.expander("**각 캠페인별 가입 증가율 보기**"):
                 for campaign, rate in increase_rates.items():
-                    st.write(f"캠페인 {event_mapping[campaign]}의 가입 증가율: {rate:.2%}")
+                    stats = campaign_stats[campaign]
+                    st.write(f"**{event_mapping[campaign]}**: 전환율 {rate:.1%} (참여자: {stats['participants']}명, 가입: {stats['signups']}명)")
             
             # 가입 증가율 결과 출력 및 가로 막대그래프 표시
             campaigns, rates = zip(*increase_rates.items())
@@ -414,7 +503,7 @@ with tab2: # 캠페인 추천 모델
             # Streamlit에서 가로 막대그래프 표시
             st.plotly_chart(fig_bar)
 
-
+# 마케팅 채널 추천 
 data_3 = memeber_df[['age', 'gender', 'marriage', 'channel', 'before_ev']]
 
 # 가입 시 유입경로 매핑
@@ -577,31 +666,72 @@ with tab4:  #전환율 예측
         select_path = st.multiselect("유입경로", path_options)
     time_input = st.slider("체류 시간(분)", min_value = 0, max_value = 100, value = 0, step = 5)
         
-    #온라인 데이터 복사 및 원-핫 인코딩
+    #온라인 데이터 복사
     df_ml_on = df_on.copy()
-    df_ml_on = pd.get_dummies(df_ml_on, columns = ["디바이스", "유입경로"])        
+
+    # 결측값 처리 (학습 전에 미리 처리)
+    df_ml_on["전환율(가입)"] = df_ml_on["전환율(가입)"].fillna(df_ml_on["전환율(가입)"].median())
+    df_ml_on["체류시간(min)"] = df_ml_on["체류시간(min)"].fillna(df_ml_on["체류시간(min)"].median())
+
+    # 원-핫 인코딩
+    df_ml_on = pd.get_dummies(df_ml_on, columns = ["디바이스", "유입경로"], drop_first=False)         
 
     #체류시간 및 원-핫 인코딩된 디바이스, 유입경로 및 타겟 변수 설정
     features = ["체류시간(min)"] + [col for col in df_ml_on.columns if "디바이스_" in col or "유입경로_" in col]
     target = "전환율(가입)"
 
     if st.button("온라인 전환율 예측"):
+        # 데이터 유효성 검사
+        if df_ml_on[target].isnull().sum() > 0:
+            st.warning("데이터에 결측값이 있습니다. 전처리를 확인해주세요.")
+            
         #입력(X), 출력(y) 데이터 정의
         X = df_ml_on[features]
         y = df_ml_on[target]
 
+        # 데이터 표준화
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+        X_scaled = pd.DataFrame(X_scaled, columns=features)
+        
         #학습 데이터와 테스트 데이터 분할(학습 데이터 : 80%, 테스트 데이터 : 20%)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42)
+        X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size = 0.2, random_state = 42, shuffle=True)
 
-        #결측값 처리
-        y_train.fillna(y_train.median(), inplace = True)
 
-        #랜덤 포레스트 회귀 모델 생성 및 학습
-        on_model = RandomForestRegressor(n_estimators=50, max_depth=10, random_state = 42, n_jobs=-1)
+        #랜덤 포레스트 회귀 모델 생성
+        on_model = RandomForestRegressor(
+            n_estimators=200,           # 트리 개수 증가
+            max_depth=15,               # 깊이 증가
+            min_samples_split=5,        # 분할 최소 샘플 수
+            min_samples_leaf=2,         # 리프 노드 최소 샘플 수
+            max_features='sqrt',        # 피처 선택 방법
+            random_state=42,
+            n_jobs=-1,
+            oob_score=True              # Out-of-bag 점수 계산
+        )
+
+        #  모델 학습
         on_model.fit(X_train, y_train)
 
         #테스트 데이터 예측
         y_pred = on_model.predict(X_test)
+
+        # 모델 성능 평가
+        mse = mean_squared_error(y_test, y_pred)
+        rmse = np.sqrt(mse)
+        mae = mean_absolute_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        
+        # 성능 지표 출력
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("RMSE", f"{rmse:.3f}")
+        with col2:
+            st.metric("MAE", f"{mae:.3f}")
+        with col3:
+            st.metric("R² Score", f"{r2:.3f}")
+        with col4:
+            st.metric("OOB Score", f"{on_model.oob_score_:.3f}")
 
         #✅예측 결과 시각화(실제 전환율 VS 예측 전환율 비교)
         fig_ml_on = go.Figure()
@@ -642,9 +772,32 @@ with tab4:  #전환율 예측
             if f"유입경로_{path}" in input_data.columns:
                 input_data[f"유입경로_{path}"] = 1
 
+        # 입력 데이터도 동일하게 표준화
+        input_data_scaled = scaler.transform(input_data)
+        input_data_scaled = pd.DataFrame(input_data_scaled, columns=features)
+
         #전환율 예측 결과 출력
         predicted_conversion = on_model.predict(input_data)[0]
+
+        # 신뢰구간 계산 (부트스트랩 방법)
+        predictions = []
+        for _ in range(100):
+            # 부트스트랩 샘플링
+            indices = np.random.choice(len(X_train), size=len(X_train), replace=True)
+            X_boot = X_train.iloc[indices]
+            y_boot = y_train.iloc[indices]
+            
+            # 부트스트랩 모델 학습
+            boot_model = RandomForestRegressor(n_estimators=50, random_state=np.random.randint(1000))
+            boot_model.fit(X_boot, y_boot)
+            pred = boot_model.predict(input_data_scaled)[0]
+            predictions.append(pred)
+        
+        confidence_lower = np.percentile(predictions, 2.5)
+        confidence_upper = np.percentile(predictions, 97.5)
+       
         st.subheader(f"예상 전환율 : {predicted_conversion:.2f}%")
+        st.write(f"95% 신뢰구간: {confidence_lower:.2f}% ~ {confidence_upper:.2f}%")
 
 with tab5:  #방문자 수 예측
     # 데이터 출력
@@ -656,38 +809,98 @@ with tab5:  #방문자 수 예측
     # 학습 데이터 준비
     df_ml_off = df_off.groupby(["날짜", "지역"])["방문자수"].sum().reset_index()
     df_ml_off["날짜"] = pd.to_datetime(df_ml_off["날짜"])
+
+    # 시계열 피처
     df_ml_off["year"] = df_ml_off["날짜"].dt.year
     df_ml_off["month"] = df_ml_off["날짜"].dt.month
     df_ml_off["day"] = df_ml_off["날짜"].dt.day
     df_ml_off["day_of_week"] = df_ml_off["날짜"].dt.weekday
+    df_ml_off["quarter"] = df_ml_off["날짜"].dt.quarter
+    df_ml_off["week_of_year"] = df_ml_off["날짜"].dt.isocalendar().week
+    df_ml_off["is_weekend"] = (df_ml_off["day_of_week"] >= 5).astype(int)
+
+    # 계절성 피처
+    df_ml_off["month_sin"] = np.sin(2 * np.pi * df_ml_off["month"] / 12)
+    df_ml_off["month_cos"] = np.cos(2 * np.pi * df_ml_off["month"] / 12)
+    df_ml_off["day_sin"] = np.sin(2 * np.pi * df_ml_off["day_of_week"] / 7)
+    df_ml_off["day_cos"] = np.cos(2 * np.pi * df_ml_off["day_of_week"] / 7)
 
     select_region = st.selectbox("지역을 선택하세요.", city_options)
 
     df_region = df_ml_off[df_ml_off["지역"] == select_region]  # 특정 지역 데이터 사용
 
-    features = ["year", "month", "day", "day_of_week"]
+    # 결측값 처리
+    df_region["방문자수"] = df_region["방문자수"].fillna(df_region["방문자수"].median())
+
+    features = ["year", "month", "day", "day_of_week", "quarter", "week_of_year", 
+                "is_weekend", "month_sin", "month_cos", "day_sin", "day_cos"]
     X = df_region[features]
     y = df_region["방문자수"]
 
     if st.button("오프라인 방문자 수 예측"):  # 향후 12개월간의 방문자 수 예측
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        off_model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+        scaler_off = StandardScaler()
+        X_scaled = scaler_off.fit_transform(X)
+        X_scaled = pd.DataFrame(X_scaled, columns=features)
+
+        # 데이터 분할
+        X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+        # 모델 생성
+        off_model = RandomForestRegressor(
+            n_estimators=300,
+            max_depth=20,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            max_features='sqrt',
+            random_state=42,
+            n_jobs=-1,
+            oob_score=True
+        )
+
+        # 모델 학습
         off_model.fit(X_train, y_train)
+
+        # 모델 성능 평가
+        y_pred_test = off_model.predict(X_test)
+        mse_off = mean_squared_error(y_test, y_pred_test)
+        rmse_off = np.sqrt(mse_off)
+        r2_off = r2_score(y_test, y_pred_test)
+
+        # 성능 지표 출력
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("RMSE", f"{rmse_off:.0f}")
+        with col2:
+            st.metric("R² Score", f"{r2_off:.3f}")
+        with col3:
+            st.metric("OOB Score", f"{off_model.oob_score_:.3f}")
 
         # 최대 날짜의 다음 달부터 12개월 간의 날짜 생성
         max_date = df_region["날짜"].max()
         start_date = (max_date + pd.DateOffset(months=1)).replace(day=1)  # 다음 달의 첫날
         future_dates = pd.date_range(start=start_date, periods=365, freq="D")
+        
         future_df = pd.DataFrame({
             "year": future_dates.year,
             "month": future_dates.month,
             "day": future_dates.day,
-            "day_of_week": future_dates.weekday
+            "day_of_week": future_dates.weekday,
+            "quarter": future_dates.quarter,
+            "week_of_year": future_dates.isocalendar().week,
+            "is_weekend": (future_dates.weekday >= 5).astype(int),
+            "month_sin": np.sin(2 * np.pi * future_dates.month / 12),
+            "month_cos": np.cos(2 * np.pi * future_dates.month / 12),
+            "day_sin": np.sin(2 * np.pi * future_dates.weekday / 7),
+            "day_cos": np.cos(2 * np.pi * future_dates.weekday / 7)
         })
+
+        # 미래 데이터도 표준화
+        future_scaled = scaler_off.transform(future_df[features])
+        future_scaled = pd.DataFrame(future_scaled, columns=features)
         
         # 방문자 수 예측
-        future_pred = off_model.predict(future_df)
-        future_df["예측 방문자 수"] = future_pred
+        future_pred = off_model.predict(future_scaled)
+        future_df["예측 방문자 수"] = np.maximum(future_pred, 0)  # 음수 방지
 
         # "년-월" 형식의 칼럼 만들기
         future_df["년월"] = future_df["year"].astype(str) + "-" + future_df["month"].astype(str).str.zfill(2)  # 월을 두 자리로 표시
