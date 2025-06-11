@@ -234,50 +234,82 @@ with tab1: # 서비스 가입 예측 모델
         return y_pred, y_pred_proba
 
     # 시각화 함수 (혼동 행렬 및 ROC 곡선)
-    def plot_metrics(y_test, y_pred, grid_search):
+    def plot_metrics(y_test, y_pred, y_pred_proba):
         cm = confusion_matrix(y_test, y_pred)
+        
 
         y_scores = grid_search.predict_proba(X_test)[:, 1]  # 긍정 클래스 확률
-        fpr, tpr, thresholds = roc_curve(y_test, y_scores)
+        fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
         roc_auc = auc(fpr, tpr)
 
         # 첫 번째 열에 혼동 행렬 시각화
         col1, col2 = st.columns(2)
 
         with col1:
-            # 혼동 행렬 시각화
-            cm_df = pd.DataFrame(cm, index=['가입', '미가입'], columns=['가입', '미가입'])
-            fig = px.imshow(cm_df, text_auto=True, color_continuous_scale='GnBu', 
-                            title='혼동 행렬')
-            fig.update_xaxes(title='예측 레이블')
-            fig.update_yaxes(title='실제 레이블')
-            fig.update_layout(width=600, height=600)
-            st.plotly_chart(fig)
-
-        with col2:
-            # ROC 곡선 시각화
-            fig_roc = go.Figure()
-
-            # ROC 곡선 추가
-            fig_roc.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', name='ROC curve (area = {:.2f})'.format(roc_auc), 
-                                        line=dict(width=2, color='blue')))
-
-            # 랜덤 분류기 추가
-            fig_roc.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Random Classifier', 
-                                        line=dict(width=2, dash='dash', color='black')))
-
-            # 레이아웃 설정
-            fig_roc.update_layout(
-                title='Receiver Operating Characteristic (ROC)',
-                xaxis_title='False Positive Rate',
-                yaxis_title='True Positive Rate',
-                showlegend=True,
-                width=600,
-                height=600
-            )
-
-            # Streamlit에서 ROC 곡선 그래프 표시
-            st.plotly_chart(fig_roc)
+        # 혼동 행렬 시각화
+        cm_df = pd.DataFrame(cm, index=['미가입', '가입'], columns=['미가입', '가입'])
+        fig = px.imshow(cm_df, text_auto=True, color_continuous_scale='GnBu', 
+                        title='혼동 행렬 (Confusion Matrix)')
+        fig.update_xaxes(title='예측 레이블')
+        fig.update_yaxes(title='실제 레이블')
+        fig.update_layout(width=600, height=600)
+        st.plotly_chart(fig)
+        
+        # 혼동 행렬 해석 추가
+        tn, fp, fn, tp = cm.ravel()
+        st.write("**혼동 행렬 해석:**")
+        st.write(f"- 참 음성 (TN): {tn}개 - 미가입을 미가입으로 정확히 예측")
+        st.write(f"- 거짓 양성 (FP): {fp}개 - 미가입을 가입으로 잘못 예측")  
+        st.write(f"- 거짓 음성 (FN): {fn}개 - 가입을 미가입으로 잘못 예측")
+        st.write(f"- 참 양성 (TP): {tp}개 - 가입을 가입으로 정확히 예측")
+    
+    with col2:
+        # ROC 곡선 시각화
+        fig_roc = go.Figure()
+        
+        # ROC 곡선 추가
+        fig_roc.add_trace(go.Scatter(
+            x=fpr, y=tpr, 
+            mode='lines', 
+            name=f'ROC curve (AUC = {roc_auc:.3f})', 
+            line=dict(width=2, color='blue')
+        ))
+        
+        # 랜덤 분류기 (대각선) 추가
+        fig_roc.add_trace(go.Scatter(
+            x=[0, 1], y=[0, 1], 
+            mode='lines', 
+            name='Random Classifier (AUC = 0.5)', 
+            line=dict(width=2, dash='dash', color='red')
+        ))
+        
+        # 레이아웃 설정
+        fig_roc.update_layout(
+            title='ROC 곡선 (Receiver Operating Characteristic)',
+            xaxis_title='False Positive Rate (거짓 양성률)',
+            yaxis_title='True Positive Rate (참 양성률)',
+            showlegend=True,
+            width=600,
+            height=600,
+            xaxis=dict(range=[0, 1]),
+            yaxis=dict(range=[0, 1])
+        )
+        
+        # Streamlit에서 ROC 곡선 그래프 표시
+        st.plotly_chart(fig_roc)
+        
+        # ROC AUC 해석 추가
+        st.write("**ROC AUC 해석:**")
+        if roc_auc >= 0.9:
+            st.write(f"🟢 AUC = {roc_auc:.3f} - 매우 우수한 성능")
+        elif roc_auc >= 0.8:
+            st.write(f"🔵 AUC = {roc_auc:.3f} - 우수한 성능")
+        elif roc_auc >= 0.7:
+            st.write(f"🟡 AUC = {roc_auc:.3f} - 양호한 성능")
+        elif roc_auc >= 0.6:
+            st.write(f"🟠 AUC = {roc_auc:.3f} - 보통 성능")
+        else:
+            st.write(f"🔴 AUC = {roc_auc:.3f} - 개선 필요")
 
     # 예측 결과 출력 함수
     def pre_result(model, new_data):
