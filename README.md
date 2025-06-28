@@ -1,3 +1,6 @@
+생성된 Fake Data Repository<br>
+[바로가기](https://github.com/jjjjunn/fake_data_for_streamlit_prj)
+
 2025년 3월 27일 배포
 * 2023년 1월 1일부터 2024년 12월 31일까지 2년 동안 자사의 서비스를 홍보하기 위한 활동을 진행했다고 가정
 * 크게 오프라인, 온라인 환경에서 홍보 및 마케팅 진행하고 각 환경에서의 성과 지표를 집계하여 csv 파일로 생성
