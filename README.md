@@ -41,6 +41,7 @@ Streamlit의 `multipage` 기능을 활용하여 전체 애플리케이션을 5�
 | **사용자 프로필** | 가상의 1,000명 사용자: 나이, 성별, 결혼 여부, 지역, 캠페인 참여 기록 등 포함 |
 
 모든 데이터는 프로젝트 목적에 맞게 **파이썬으로 생성된 가상 데이터(fake data)**를 사용하여 구현되었습니다.
+
 [가상 데이터 코드 보러가기](https://github.com/jjjjunn/fake_data_for_streamlit_prj)
 
 ---
@@ -91,8 +92,8 @@ Streamlit의 `multipage` 기능을 활용하여 전체 애플리케이션을 5�
 
 | 범주       | 기술 |
 |------------|------|
-| **Frontend** | Streamlit |
-| **Backend / Logic** | Python |
+| **Frontend** | `Streamlit` |
+| **Backend / Logic** | `Python` |
 | **데이터 처리** | `pandas`, `numpy`, `datetime`, `time` |
 | **시각화 도구** | `seaborn`, `matplotlib`, `plotly`, `folium` |
 | **머신러닝 라이브러리** | `scikit-learn`, `RandomForest`, `GridSearchCV`, `VotingClassifier`, `Pipeline`, `OneHotEncoder`, `StandardScaler` 등 |
@@ -106,6 +107,25 @@ Streamlit의 `multipage` 기능을 활용하여 전체 애플리케이션을 5�
 - 비즈니스 현장에서 데이터 기반 의사결정의 가능성을 체험  
 - 다양한 모델 및 시각화 기법을 통합하여 **End-to-End ML 프로젝트 구조** 이해  
 - 비개발자도 활용 가능한 **인터랙티브한 대시보드 경험** 제공
+
+---
+
+## 📝 개발 기록 (블로그 제작기)
+
+| 주제 | 링크 |
+|------|------|
+|가상데이터 생성 | [바로가기](https://puppy-foot-it.tistory.com/722) |
+|데이터 전처리, 시각화 | [바로가기](https://puppy-foot-it.tistory.com/734) |
+|데이터 시각화: 캠페인별 방문&참여자 | [바로가기](https://puppy-foot-it.tistory.com/735) |
+|데이터 시각화: 연령대별 분 | [바로가기](https://puppy-foot-it.tistory.com/736) |
+|머신러닝 | [바로가기](https://puppy-foot-it.tistory.com/737) |
+|DB연동 | [바로가기](https://puppy-foot-it.tistory.com/738) |
+|Streamlit 구현하기 | [바로가기](https://puppy-foot-it.tistory.com/739) |
+|페이지 구현 | [바로가기](https://puppy-foot-it.tistory.com/740) |
+|멀티페이지 | [바로가기](https://puppy-foot-it.tistory.com/741) |
+|Streamlit 배포하기 | [바로가기](https://puppy-foot-it.tistory.com/742) |
+|ML 구현하기 | [바로가기](https://puppy-foot-it.tistory.com/743) |
+|전체 보완 및 재배포 | [바로가기](https://puppy-foot-it.tistory.com/722) |
 
 ---
 
