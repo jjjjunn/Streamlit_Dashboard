@@ -80,7 +80,7 @@ Streamlit의 `multipage` 기능을 활용하여 전체 애플리케이션을 5�
 
 ## 📊 주요 기능
 
-- 📂 캠페인 성과 데이터 자동 CSV 저장
+- 📂 캠페인 성과 데이터 CSV 로드
 - 🗺️ Folium 기반 지도 시각화 (오프라인 캠페인 분포)
 - 📉 Plotly 및 Seaborn을 이용한 대화형 시각화
 - 🧠 사용자 조건에 따른 실시간 예측 결과 출력
@@ -117,7 +117,7 @@ Streamlit의 `multipage` 기능을 활용하여 전체 애플리케이션을 5�
 |가상데이터 생성 | [바로가기](https://puppy-foot-it.tistory.com/722) |
 |데이터 전처리, 시각화 | [바로가기](https://puppy-foot-it.tistory.com/734) |
 |데이터 시각화: 캠페인별 방문&참여자 | [바로가기](https://puppy-foot-it.tistory.com/735) |
-|데이터 시각화: 연령대별 분 | [바로가기](https://puppy-foot-it.tistory.com/736) |
+|데이터 시각화: 연령대별 분석 | [바로가기](https://puppy-foot-it.tistory.com/736) |
 |머신러닝 | [바로가기](https://puppy-foot-it.tistory.com/737) |
 |DB연동 | [바로가기](https://puppy-foot-it.tistory.com/738) |
 |Streamlit 구현하기 | [바로가기](https://puppy-foot-it.tistory.com/739) |
