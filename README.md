@@ -145,3 +145,6 @@ Streamlit의 `multipage` 기능을 활용하여 전체 애플리케이션을 5�
 
 ---
 
+## 📜 라이선스 (License)
+
+이 프로젝트는 [MIT License](LICENSE) 를 따릅니다.
