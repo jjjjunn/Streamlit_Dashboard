@@ -126,6 +126,7 @@ Streamlit의 `multipage` 기능을 활용하여 전체 애플리케이션을 5�
 |Streamlit 배포하기 | [바로가기](https://puppy-foot-it.tistory.com/742) |
 |ML 구현하기 | [바로가기](https://puppy-foot-it.tistory.com/743) |
 |전체 보완 및 재배포 | [바로가기](https://puppy-foot-it.tistory.com/722) |
+|예측모델 보완하기 | [바로가기](https://puppy-foot-it.tistory.com/926) |
 
 ---
 
