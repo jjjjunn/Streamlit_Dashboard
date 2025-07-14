@@ -272,7 +272,7 @@ with tab3:
         daily_data["PREDICTED_PART"] = model.predict(X)
         rmse = np.sqrt(mean_squared_error(y_test, model.predict(X_test)))
         st.write(f"예측 RMSE: {rmse:.2f}")
-        st.write(f"모델이 예측한 전환수와 실제 수치 사이의 평균차가 :blue[{rmse:.2f}]입니다.")
+        st.write(f"모델이 예측한 참여자수와 실제 수치 사이의 평균차가 :blue[{rmse:.2f}]입니다.")
         fig = px.line(
             daily_data,
             x="DATE",
